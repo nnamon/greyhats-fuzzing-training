@@ -11,7 +11,6 @@ Greyhats Training: Introduction to Fuzzers.
 4. Learn how fuzzers help with finding crashes.
 5. Learn what sanitizers are.
 6. Build your first fuzzing harness with libfuzzer with an example vulnerable library.
-7. Write exploits using the discovered vulnerabilities.
 
 ## Memory Corruption Vulnerabilities
 
@@ -148,11 +147,75 @@ int main() {
 #### Double Free
 
 ```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+void vuln() {
+    char * one = malloc(24);
+    char * two = malloc(24);
+    char * three = malloc(24);
+    printf("one ptr = 0x%p\n", one);
+    printf("two ptr = 0x%p\n", two);
+    printf("three ptr = 0x%p\n", three);
+
+    free(one);
+    puts("free one");
+    free(two);
+    puts("free two");
+    free(one);
+    puts("free one");
+
+    char * four = malloc(24);
+    char * five = malloc(24);
+    char * six = malloc(24);
+    printf("four ptr = 0x%p\n", four);
+    printf("five ptr = 0x%p\n", five);
+    printf("six ptr = 0x%p\n", six);
+}
+
+int main() {
+    vuln();
+}
 ```
 
 #### Type Confusion
 
 ```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+struct TypeOne {
+    char buffer[48];
+    uint32_t canary;
+};
+
+struct TypeTwo {
+    char buffer[24];
+    uint32_t canary;
+};
+
+void right(void * object) {
+    struct TypeOne * converted = (struct TypeOne *) object;
+    printf("canary = 0x%x\n", converted->canary);
+}
+
+void vuln(void * object) {
+    struct TypeTwo * converted = (struct TypeTwo *) object;
+    printf("canary = 0x%x\n", converted->canary);
+}
+
+int main() {
+    struct TypeOne object;
+    memset(object.buffer, 'A', sizeof(struct TypeOne));
+    object.canary = 0x42424242;
+    right(&object);
+
+    vuln(&object);
+}
 ```
 
 ## Why are crashes important?
@@ -163,7 +226,11 @@ value, the program will crash when it tries to execute code at that invalid addr
 
 ## What are Fuzzers?
 
+See the presentation derived from Terry Chia's talk at CenCon.
+
 ## Sanitizers
+
+See the presentation derived from Terry Chia's talk at CenCon.
 
 ## LibFuzzer Tutorial
 
@@ -177,10 +244,9 @@ sudo apt-get upgrade -y
 sudo apt-get install -y clang make
 ```
 
-### Instrumenting the Library
-
 ### Writing the Harness
+
+### Instrumenting the Harness and Library
 
 ### Triaging the Crashes
 
-### Writing the Exploit
