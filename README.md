@@ -340,4 +340,18 @@ generate testcases without any initial input to mutate.
 
 ### Triaging the Crashes
 
-We will use GDB to debug the crashes manually.
+First, we can replay the crash by passing it as an argument.
+
+```
+./fuzz-asan crash-ac16616a28de5270a35e47ae291e59144f1cbdea
+```
+
+Notice that the symbols aren't resolved. We need to properly set the symbolizer path.
+
+```
+sudo ln -s /usr/bin/llvm-symbolizer-6.0 /usr/bin/llvm-symbolizer
+````
+
+This will give us some more information about the crash.
+
+We will use GDB to further debug the crashes manually.
