@@ -30,7 +30,8 @@ Some of the common categories include:
 2. Heap overflows - read/write outside a buffer on the heap.
 3. Use of uninitialized values
 4. Use after frees - Using an allocated region of memory after it has been freed.
-5. Type confusion - Interpreting a region of memory as the wrong type
+5. Double frees - Freeing of an already freed resource.
+6. Type confusion - Interpreting a region of memory as the wrong type
 
 ### Examples
 
@@ -90,9 +91,61 @@ int main() {
 #### Uninitialized Variables
 
 ```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+void vuln() {
+    uint64_t uninit;
+    printf("uninit = 0x%lx\n", uninit);
+}
+
+void set_vars() {
+    uint64_t var;
+    var = 0x4141414142424242;
+    printf("var = 0x%lx\n", var);
+}
+
+int main() {
+    vuln();
+    set_vars();
+    vuln();
+}
 ```
 
 #### Use After Free
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#define items 12
+
+void vuln() {
+    uint64_t * canary = malloc(sizeof(uint64_t) * items);
+    memset(canary , 'A', sizeof(uint64_t) * items);
+    for (int i = 0; i < items; i++) {
+        printf("canary = 0x%lx\n", canary[i]);
+    }
+
+    free(canary);
+
+    char * buffer = malloc(sizeof(uint64_t) * items);
+    memset(buffer, 'B', sizeof(uint64_t) * items);
+    for (int i = 0; i < items; i++) {
+        printf("canary = 0x%lx\n", canary[i]);
+    }
+}
+
+int main() {
+    vuln();
+}
+```
+
+#### Double Free
 
 ```c
 ```
@@ -103,6 +156,10 @@ int main() {
 ```
 
 ## Why are crashes important?
+
+Crashes are indicative of some issue during the program's runtime. It can be a side-effect of some
+region of memory being corrupted. For instance, the return pointer is overwritten with an invalid
+value, the program will crash when it tries to execute code at that invalid address.
 
 ## What are Fuzzers?
 
@@ -120,4 +177,10 @@ sudo apt-get upgrade -y
 sudo apt-get install -y clang make
 ```
 
-### Exploit
+### Instrumenting the Library
+
+### Writing the Harness
+
+### Triaging the Crashes
+
+### Writing the Exploit
