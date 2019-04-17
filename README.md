@@ -241,12 +241,103 @@ Install the build dependencies.
 ```
 sudo apt-get update
 sudo apt-get upgrade -y
-sudo apt-get install -y clang make
+sudo apt-get install -y clang make gdb
 ```
 
 ### Writing the Harness
 
+If we look at the `main.c` file, we can see that the API includes the `parse_data` call.
+
+```c
+#include "vulnerable.h"
+
+int main() {
+    char * ptr;
+
+    // Print Date
+    struct DateCommand {
+        uint32_t id;
+        char payload[24];
+    } date_command;
+    date_command.id = 0xfefefefe;
+    strcpy(date_command.payload, "/bin/date");
+    ptr = (char *) &date_command;
+    parse_data(ptr, sizeof(date_command));
+
+    // Command One
+    struct OneCommand {
+        uint32_t id;
+        uint8_t size;
+    } one_command;
+    one_command.id = 0;
+    one_command.size = 9 + 12;
+    ptr = (char *) &one_command;
+    parse_data(ptr, sizeof(one_command));
+
+    // Command Two
+    struct TwoCommand {
+        uint32_t id;
+        uint8_t payload[4];
+    } two_command;
+    two_command.id = 1;
+    two_command.payload[0] = 2;
+    two_command.payload[1] = 3;
+    two_command.payload[2] = 2;
+    two_command.payload[3] = 0;
+    ptr = (char *) &two_command;
+    parse_data(ptr, sizeof(two_command));
+
+    return 0;
+}
+```
+
+We can use this in our harness. The entry point for the fuzzer looks like this:
+
+```c
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+  // DoSomethingWithData(Data, Size);
+  return 0;
+}
+```
+
+It is trivial to apply this to our example.
+
+```c
+#include <stdint.h>
+#include <stddef.h>
+#include "vulnerable.h"
+
+int LLVMFuzzerTestOneInput(const uint8_t * data, size_t size) {
+    parse_data((char *) data, size);
+    return 0;
+}
+```
+
 ### Instrumenting the Harness and Library
+
+Now, we need to build the harness. To begin with, we can just start with instrumentation and no
+sanitizers.
+
+```
+clang -g -O1 -o fuzz-basic -fsanitize=fuzzer harness.c vulnerable.c
+```
+
+Additionally, we can also build it with ASAN.
+
+```
+clang -g -O1 -o fuzz-asan -fsanitize=fuzzer,address harness.c vulnerable.c
+```
+
+### Running the Fuzzer
+
+To start with, we will run the fuzzer without any corpus. A benefit of libFuzzer is that it can
+generate testcases without any initial input to mutate.
+
+```
+./fuzz-basic
+./fuzz-asan
+```
 
 ### Triaging the Crashes
 
+We will use GDB to debug the crashes manually.
