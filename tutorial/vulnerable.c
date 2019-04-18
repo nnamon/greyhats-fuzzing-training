@@ -37,7 +37,7 @@ void command_one(char * offset, size_t size) {
         return;
     }
     struct Data {
-        char name[256];
+        char name[48];
         uint32_t cookie;
     } secret;
     strcpy(secret.name, "My Name is: Jim Leahy");
@@ -57,19 +57,19 @@ void command_two(char * offset, size_t size) {
         if (current == 0) {
             return;
         }
-        else if (current % 2 == 0) {
+        if (current % 2 == 0) {
             fizzbuzz = malloc(5);
             strcpy(fizzbuzz, "FIZZ");
             puts(fizzbuzz);
             free(fizzbuzz);
         }
-        else if (current % 3 == 0) {
+        if (current % 3 == 0) {
             fizzbuzz = malloc(5);
             strcpy(fizzbuzz, "BUZZ");
             puts(fizzbuzz);
             free(fizzbuzz);
         }
-        else if (current == 4) {
+        if (current == 4) {
             puts("FIZZBUZZ");
             free(fizzbuzz);
         }
